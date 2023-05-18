@@ -1,0 +1,13 @@
+﻿apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: image-registry-pvc
+  namespace: openshift-image-registry
+spec:
+  storageClassName: lvms-vg1
+  accessModes:
+    - ReadWriteOnce
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 100Gi
