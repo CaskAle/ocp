@@ -10,14 +10,14 @@ data:
       retention: 7d
       volumeClaimTemplate:
         spec:
-          storageClassName: odf-lvm-vg1
+          storageClassName: lvms-vg1
           resources:
             requests:
               storage: 5Gi
     alertmanagerMain:
       volumeClaimTemplate:
         spec:
-          storageClassName: odf-lvm-vg1
+          storageClassName: lvms-vg1
           resources:
             requests:
               storage: 1Gi

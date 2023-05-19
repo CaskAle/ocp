@@ -80,7 +80,7 @@ oc apply -f cluster-monitoring-config.yaml
 1. Create a pvc from yaml
 
    ```sh
-   oc create -f sno-image-registry-pvc.yaml
+   oc create -f ocp-image-registry-pvc.yaml
    ```
 
 1. Modify the image registry configuration
