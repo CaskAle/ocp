@@ -15,7 +15,7 @@
    ```
 
 1. Give myself admin priviledges
-
+oc 
    ```sh
    oc adm policy add-cluster-role-to-user cluster-admin troy
    ```
@@ -31,7 +31,7 @@
 1. Make ConfigMap for CA certificate in openshift-config namespace.
 
    ```sh
-   oc create configmap ankersen-ca --from-file=ca-bundle.crt=ankersen-ca.crt -n openshift-config
+   oc create configmap ankersen-ca --from-file=ca-bundle.crt=/home/troy/data/keys/ankersen-CA/Ankersen-CA.crt -n openshift-config
    ```
 
 1. Update the cluster-wide proxy configuration with the newly created ConfigMap.
@@ -49,7 +49,7 @@
 1. Create a tls secret in the openshift-ingress namespace.
 
    ```sh
-   oc create secret tls ankersen-ingress-cert --cert=ocp-ingress.pem --key=ocp-ingress.key -n openshift-ingress
+   oc create secret tls ankersen-ingress-cert --cert=/home/troy/data/keys/ankersen-CA/ocp-app-ingress-crt.pem --key=/home/troy/data/keys/ankersen-CA/ocp-app-ingress.key -n openshift-ingress
    ```
 
    > Note: The pem formatted cert file should contain, in order, the certificate, any intermediate certificates, the CA certificate, and the certificate key.
@@ -64,7 +64,12 @@
    ```sh
    oc edit ingresscontroller.operator -n openshift-ingress-operator
    ```
+## Set up etcd defragmentation cron job
 
+```sh
+ oc create -k kustomization.yaml
+ ```
+ 
 ## Set up persistent storage for cluster monitoring
 
 - Use the ConfigMap already created

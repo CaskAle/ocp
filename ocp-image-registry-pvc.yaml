@@ -1,12 +1,12 @@
 ﻿apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: image-registry-pvc
+  name: image-registry-storage
   namespace: openshift-image-registry
 spec:
-  storageClassName: lvms-vg1
+  storageClassName: nfs-provisioner
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
   volumeMode: Filesystem
   resources:
     requests:
