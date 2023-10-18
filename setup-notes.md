@@ -15,7 +15,7 @@
    ```
 
 1. Give myself admin priviledges
-oc 
+ 
    ```sh
    oc adm policy add-cluster-role-to-user cluster-admin troy
    ```
@@ -131,6 +131,10 @@ oc apply -f cluster-monitoring-config.yaml
    ```yaml
    rolloutStrategy: Recreate
    ```
+## AlertManager Receivers
+gmail smtp: smtp.gmail.com:587
+gmail userid: CaskAle13c
+gmail password: use app password
 
 ## Grow the root filesystem in CoreOS
 
