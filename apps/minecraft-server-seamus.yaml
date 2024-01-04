@@ -119,7 +119,7 @@ kind: Service
 apiVersion: v1
 metadata:
   namespace: minecraft
-  name: minecraft-seamus
+  name: minecraft-seamus-ingress
   labels:
     app: minecraft-seamus
 spec:

@@ -115,7 +115,7 @@ kind: Service
 apiVersion: v1
 metadata:
   namespace: minecraft
-  name: minecraft-teagan-ingress
+  name: minecraft-teagan
   labels:
     app: minecraft-teagan
 spec:

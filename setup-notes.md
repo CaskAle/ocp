@@ -49,7 +49,7 @@
 1. Create a tls secret in the openshift-ingress namespace.
 
    ```sh
-   oc create secret tls ankersen-ingress-cert --cert=/home/troy/data/keys/ankersen-CA/ocp-app-ingress-crt.pem --key=/home/troy/data/keys/ankersen-CA/ocp-app-ingress.key -n openshift-ingress
+   oc create secret tls ankersen-ingress-cert --cert=/home/troy/data/keys/ankersen-CA/ocp-app-ingress-bundle.pem --key=/home/troy/data/keys/ankersen-CA/ocp-app-ingress.key -n openshift-ingress
    ```
 
    > Note: The pem formatted cert file should contain, in order, the certificate, any intermediate certificates, the CA certificate, and the certificate key.

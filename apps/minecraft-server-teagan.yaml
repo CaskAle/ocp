@@ -2,26 +2,26 @@
 kind: Deployment
 apiVersion: apps/v1
 metadata:
-  name: minecraft-seamus
+  name: minecraft-teagan
   labels:
-    app: minecraft-seamus
+    app: minecraft-teagan
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: minecraft-seamus
+      app: minecraft-teagan
   template:
     metadata:
       namespace: minecraft
       labels:
-        app: minecraft-seamus
+        app: minecraft-teagan
     spec:
       volumes:
         - name: data-volume
           persistentVolumeClaim:
-            claimName: minecraft-seamus-pvc
+            claimName: minecraft-teagan-pvc
       containers:
-        - name: minecraft-seamus
+        - name: minecraft-teagan
           image: >-
             itzg/minecraft-server@sha256:818b1b2ffbc78dfa6c27115b1a0ccace4779de4df8d34d87006a60831e2ed13b
           securityContext:
@@ -38,18 +38,14 @@ spec:
             - containerPort: 25565
               protocol: TCP
           env:
-            - name: 'EULA'
-              value: 'TRUE'
-            - name: 'TZ'
-              value: 'America/Chicago'
-            - name: 'OPS'
-              value: 'EmeraldDen,TubOfGoo'
-            - name: 'MAX_MEMORY'
+            - name: EULA
+              value: 'true'
+            - name: TZ
+              value: America/Chicago
+            - name: OPS
+              value: EmeraldDen,TubOfGoo
+            - name: MAX_MEMORY
               value: '6G'
-            - name: 'TYPE'
-              value: 'CURSEFORGE'
-            - name: 'CF_SERVER_MOD'
-              value: 'Better-MC-FORGE-Server-Pack-1.19.2.zip'
           resources:
             limits:
               cpu: '1'
@@ -82,13 +78,13 @@ kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
   namespace: minecraft
-  name: minecraft-seamus-pvc
+  name: minecraft-teagan-pvc
   labels:
-    app: minecraft-seamus
+    app: minecraft-teagan
 spec:
   selector:
     matchLabels:
-      app: minecraft-seamus
+      app: minecraft-teagan
   accessModes:
     - ReadWriteOnce
   resources:
@@ -101,16 +97,16 @@ spec:
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: minecraft-seamus-pv
+  name: minecraft-teagan-pv
   labels:
-    app: minecraft-seamus
+    app: minecraft-teagan
 spec:
   capacity:
     storage: 500Mi 
   accessModes:
   - ReadWriteOnce
   nfs: 
-    path: /volume1/ocp-minecraft-seamus
+    path: /volume1/ocp-minecraft-teagan
     server: brixton.ankersen.dev
   storageClassName: nfs-wait
 
@@ -119,21 +115,21 @@ kind: Service
 apiVersion: v1
 metadata:
   namespace: minecraft
-  name: minecraft-seamus
+  name: minecraft-teagan-ingress
   labels:
-    app: minecraft-seamus
+    app: minecraft-teagan
 spec:
   ports:
     - name: port-rcon
       protocol: TCP
       port: 25575
       targetPort: 25575
-      nodePort: 30175
+      nodePort: 30075
     - name: port-game
       protocol: TCP
       port: 25565
       targetPort: 25565
-      nodePort: 30165
+      nodePort: 30065
   type: NodePort
   selector:
-    app: minecraft-seamus
+    app: minecraft-teagan
