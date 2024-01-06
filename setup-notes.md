@@ -15,7 +15,7 @@
    ```
 
 1. Give myself admin priviledges
- 
+
    ```sh
    oc adm policy add-cluster-role-to-user cluster-admin troy
    ```
@@ -64,12 +64,13 @@
    ```sh
    oc edit ingresscontroller.operator -n openshift-ingress-operator
    ```
+
 ## Set up etcd defragmentation cron job
 
 ```sh
  oc create -k kustomization.yaml
  ```
- 
+
 ## Set up persistent storage for cluster monitoring
 
 - Use the ConfigMap already created
@@ -82,13 +83,7 @@ oc apply -f cluster-monitoring-config.yaml
 
 ## Set up image registry
 
-1. Create a pvc from yaml
-
-   ```sh
-   oc create -f ocp-image-registry-pvc.yaml
-   ```
-
-1. Modify the image registry configuration
+1.1. Modify the image registry configuration
 
    ```sh
    oc edit configs.imageregistry.operator.openshift.io
@@ -117,21 +112,11 @@ oc apply -f cluster-monitoring-config.yaml
    ```yaml
    storage:
      pvc:
-       claim: image-registry-pvc
+       claim:
    ```
 
-1. Change
-
-   ```yaml
-   rolloutStrategy: RollingUpdate
-   ```
-
-   to
-
-   ```yaml
-   rolloutStrategy: Recreate
-   ```
 ## AlertManager Receivers
+
 gmail smtp: smtp.gmail.com:587
 gmail userid: CaskAle13c
 gmail password: use app password
