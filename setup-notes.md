@@ -31,13 +31,17 @@
 1. Make ConfigMap for CA certificate in openshift-config namespace.
 
    ```sh
-   oc create configmap ankersen-ca --from-file=ca-bundle.crt=/home/troy/data/keys/ankersen-CA/Ankersen-CA.crt -n openshift-config
+   oc create configmap ankersen-ca \
+     --from-file=ca-bundle.crt=/home/troy/data/keys/ankersen-ca/ankersen-ca-ec384_crt.pem \
+     -n openshift-config
    ```
 
 1. Update the cluster-wide proxy configuration with the newly created ConfigMap.
 
    ```sh
-   oc patch proxy/cluster --type=merge --patch='{"spec":{"trustedCA":{"name":"ankersen-ca"}}}'
+   oc patch proxy/cluster \
+     --type=merge \
+     --patch='{"spec":{"trustedCA":{"name":"ankersen-ca"}}}'
    ```
 
    This can also be done by direct edit of the proxy config directly and replace the empty quotes from the defaultCertificate key with the name of the ConfigMap.
@@ -49,14 +53,21 @@
 1. Create a tls secret in the openshift-ingress namespace.
 
    ```sh
-   oc create secret tls ankersen-ingress-cert --cert=/home/troy/data/keys/ankersen-CA/ocp-app-ingress-bundle.pem --key=/home/troy/data/keys/ankersen-CA/ocp-app-ingress.key -n openshift-ingress
+   oc create secret tls ankersen-ingress-cert \
+     --cert=/home/troy/data/keys/ankersen-ca/apps.ocp.ankersen.dev-wildcard-ec384_bundle.pem \
+     --key=/home/troy/data/keys/ankersen-ca/apps.ocp.ankersen.dev-wildcard-ec384_prv.pem \
+     -n openshift-ingress
    ```
 
-   > Note: The pem formatted cert file should contain, in order, the certificate, any intermediate certificates, the CA certificate, and the certificate key.
+   > Note: The pem formatted cert file should contain, in order, the certificate, any intermediate certificates, and the CA certificate.
+
 1. Update the Ingress Controller configuration with the secret.
 
    ```sh
-   oc patch ingresscontroller.operator default --type=merge -p '{"spec":{"defaultCertificate": {"name": "ankersen-ingress-cert"}}}' -n openshift-ingress-operator
+   oc patch ingresscontroller.operator default \
+     --type=merge \
+     -p '{"spec":{"defaultCertificate": {"name": "ankersen-ingress-cert"}}}' \
+     -n openshift-ingress-operator
    ```
 
    This can also be edited directly with:
@@ -83,7 +94,9 @@ oc apply -f cluster-monitoring-config.yaml
 
 ## Set up image registry
 
-1.1. Modify the image registry configuration
+***Create the PVC in advance for SNO***
+
+1. Modify the image registry configuration
 
    ```sh
    oc edit configs.imageregistry.operator.openshift.io

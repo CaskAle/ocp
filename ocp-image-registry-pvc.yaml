@@ -4,10 +4,8 @@ metadata:
   name: image-registry-storage
   namespace: openshift-image-registry
 spec:
-  storageClassName: nfs-provisioner
   accessModes:
-    - ReadWriteMany
-  volumeMode: Filesystem
+    - ReadWriteOnce
   resources:
     requests:
       storage: 100Gi
