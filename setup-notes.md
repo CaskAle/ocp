@@ -1,18 +1,51 @@
-# Notes
+# Openshift Post Install Notes
 
-## Setup Authentication with htpasswd
+## Setup htpasswd identity provider
 
-1. Create the htpasswd secret:
+Details are at:
+https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/authentication_and_authorization/configuring-identity-providers
 
-   ```sh
-   oc create secret generic htpasswd-secret --from-file=htpasswd=htpasswd -n openshift-config
-   ```
+### Create an htpasswd file
 
-1. Create OAuth htpasswd provider
+```sh
+htpasswd -c -B -b </path/to/htpasswd> <username> <password>
+```
 
-   ```sh
-   oc apply -f htpasswd-oauth-provider.yaml
-   ```
+add additional users with the same command sans the `-c`.
+
+### Create the htpasswd secret
+
+This will create a secret in the openshift-config namespace based upon the htpasswd file created in the step above.
+
+```sh
+oc create secret generic htpasswd-secret \
+  --from-file=htpasswd=htpasswd \
+  -n openshift-config
+```
+
+### Create OAuth htpasswd provider
+
+This will create the htpasswd identity provider.  It will use the htpasswd-secret secret created in the step above
+
+```yaml
+# htpasswd-oauth-provider.yaml
+apiVersion: config.openshift.io/v1
+kind: OAuth
+metadata:
+name: cluster
+spec:
+identityProviders:
+- name: htpasswd-oauth-provider 
+   mappingMethod: claim 
+   type: HTPasswd
+   htpasswd:
+      fileData:
+      name: htpasswd-secret
+```
+
+```zsh
+oc apply -f htpasswd-oauth-provider.yaml
+```
 
 1. Give myself admin priviledges
 
@@ -92,51 +125,51 @@
 oc apply -f cluster-monitoring-config.yaml
 ```
 
-## Set up image registry
+## Set up image registry storage
 
-***Create the PVC in advance for SNO***
+### Create the PVC in advance for SNO
 
-1. Modify the image registry configuration
+```yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: image-registry-storage
+  namespace: openshift-image-registry
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Gi
+```
 
-   ```sh
-   oc edit configs.imageregistry.operator.openshift.io
-   ```
+### Modify the image registry configuration
 
-1. Change
+```sh
+oc edit configs.imageregistry.operator.openshift.io
+```
 
-   ```yaml
-   managementState: Removed
-   ```
+Changes:
 
-    to
-
-   ```yaml
-   managementState: Managed
-   ```
-
-1. Change
-
-   ```yaml
-   storage: {}
-   ```
-
-   to
-
-   ```yaml
-   storage:
-     pvc:
-       claim:
-   ```
+```yaml
+managementState: Managed
+rolloutStrategy: Recreate
+storage:
+  pvc:
+    claim: image-registry-storage
+```
 
 ## AlertManager Receivers
 
 gmail smtp: smtp.gmail.com:587
+
 gmail userid: CaskAle13c
+
 gmail password: use app password
 
 ## Grow the root filesystem in CoreOS
 
-```sh
+```zsh
 sudo su
 growpart /dev/sda 4
 sudo su -
