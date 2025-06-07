@@ -3,7 +3,7 @@
 ## Setup htpasswd identity provider
 
 Details are at:
-https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/authentication_and_authorization/configuring-identity-providers
+<https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/authentication_and_authorization/configuring-identity-providers>
 
 ### Create an htpasswd file
 
@@ -11,7 +11,8 @@ https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/
 htpasswd -c -B -b </path/to/htpasswd> <username> <password>
 ```
 
-add additional users with the same command sans the `-c`.
+- at least one user should be "troy".
+- add additional users with the same command sans the `-c`.
 
 ### Create the htpasswd secret
 
@@ -28,92 +29,138 @@ oc create secret generic htpasswd-secret \
 This will create the htpasswd identity provider.  It will use the htpasswd-secret secret created in the step above
 
 ```yaml
-# htpasswd-oauth-provider.yaml
 apiVersion: config.openshift.io/v1
 kind: OAuth
 metadata:
-name: cluster
+  name: cluster
 spec:
-identityProviders:
-- name: htpasswd-oauth-provider 
-   mappingMethod: claim 
-   type: HTPasswd
-   htpasswd:
-      fileData:
-      name: htpasswd-secret
+  identityProviders:
+    - name: htpasswd-oauth-provider 
+      mappingMethod: claim 
+      type: HTPasswd
+      htpasswd:
+        fileData:
+          name: htpasswd-secret
 ```
 
 ```zsh
 oc apply -f htpasswd-oauth-provider.yaml
 ```
 
-1. Give myself admin priviledges
+### Give user "troy" admin priviledges
 
-   ```sh
-   oc adm policy add-cluster-role-to-user cluster-admin troy
-   ```
+```zsh
+oc adm policy add-cluster-role-to-user cluster-admin troy
+```
 
-1. Delete the kubeadmin user
-
-   ```sh
-   oc delete secret kubeadmin -n kube-system
-   ```
-
-## Replace default ingress certificate
-
-1. Make ConfigMap for CA certificate in openshift-config namespace.
-
-   ```sh
-   oc create configmap ankersen-ca \
-     --from-file=ca-bundle.crt=/home/troy/data/keys/ankersen-ca/ankersen-ca-ec384_crt.pem \
-     -n openshift-config
-   ```
-
-1. Update the cluster-wide proxy configuration with the newly created ConfigMap.
-
-   ```sh
-   oc patch proxy/cluster \
-     --type=merge \
-     --patch='{"spec":{"trustedCA":{"name":"ankersen-ca"}}}'
-   ```
-
-   This can also be done by direct edit of the proxy config directly and replace the empty quotes from the defaultCertificate key with the name of the ConfigMap.
-
-   ```sh
-   oc edit proxy/cluster
-   ```
-
-1. Create a tls secret in the openshift-ingress namespace.
-
-   ```sh
-   oc create secret tls ankersen-ingress-cert \
-     --cert=/home/troy/data/keys/ankersen-ca/apps.ocp.ankersen.dev-wildcard-ec384_bundle.pem \
-     --key=/home/troy/data/keys/ankersen-ca/apps.ocp.ankersen.dev-wildcard-ec384_prv.pem \
-     -n openshift-ingress
-   ```
-
-   > Note: The pem formatted cert file should contain, in order, the certificate, any intermediate certificates, and the CA certificate.
-
-1. Update the Ingress Controller configuration with the secret.
-
-   ```sh
-   oc patch ingresscontroller.operator default \
-     --type=merge \
-     -p '{"spec":{"defaultCertificate": {"name": "ankersen-ingress-cert"}}}' \
-     -n openshift-ingress-operator
-   ```
-
-   This can also be edited directly with:
-
-   ```sh
-   oc edit ingresscontroller.operator -n openshift-ingress-operator
-   ```
-
-## Set up etcd defragmentation cron job
+### Delete the kubeadmin user
 
 ```sh
- oc create -k kustomization.yaml
- ```
+oc delete secret kubeadmin -n kube-system
+```
+
+## Replace default ingress certificate with LetsEncrypt certificate
+
+### Install the cert-manager operator
+
+### Get an api token from CloudFlare dns
+
+### Create a secret for Cloudflare dns api token
+
+```zsh
+oc create secret generic cloudflare-api-token-secret \
+  -n cert-manager \
+  --from-literal=api-token=<token>
+  ```
+
+### Create a LetsEncrypt ClusterIssuer
+
+```yaml
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-cluster-issuer
+spec:
+  acme:
+    server: 'https://acme-v02.api.letsencrypt.org/directory'
+    privateKeySecretRef:
+      name: acme-account-private-key
+    solvers:
+      - dns01:
+          cloudflare:
+            apiTokenSecretRef:
+              key: api-token
+              name: cloudflare-api-token-secret
+```
+
+### Create apps wildcard ingress Certificate
+
+```yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: apps-ocp-ankersen-dev-certificate
+  namespace: openshift-ingress
+spec:
+  commonName: apps.ocp.ankersen.dev
+  dnsNames:
+    - "apps.ocp.ankersen.dev" 
+    - "*.apps.ocp.ankersen.dev"
+  secretName: apps-ocp-ankersen-dev-tls
+  isCA: false
+  privateKey:
+    algorithm: ECDSA
+    rotationPolicy: Always
+    size: 384
+  issuerRef:
+    group: cert-manager.io
+    name: letsencrypt-cluster-issuer
+    kind: ClusterIssuer
+```
+
+### Download the LetsEncrypt CA certificate
+
+<https://letsencrypt.org/certs/isrgrootx1.pem>
+
+```zsh
+curl https://letsencrypt.org/certs/isrgrootx1.pem > ./letsencrypt.pem
+```
+
+### Create a ConfigMap for LetsEncrypt ca certificate
+
+```zsh
+oc create configmap trusted-ca \
+  --from-file=ca-bundle.crt=./letsencrypt.pem \
+  -n openshift-config
+```
+
+```zsh
+oc patch proxy cluster \
+  --type=merge \
+  --patch='{"spec":{"trustedCA":{"name":"trusted-ca"}}}'
+```
+
+This can also be edited directly with:
+
+```zsh
+oc edit proxy cluster
+```
+
+### Update the default IngressController to use the LetsEncrypt wildcard tls
+
+```zsh
+oc patch ingresscontroller.operator default \
+  --type=merge \
+  --patch '{"spec":{"defaultCertificate": {"name": "apps-ocp-lab-snimmo-com-tls"}}}' \
+  -n openshift-ingress-operator
+```
+
+This can also be edited directly with:
+
+```zsh
+oc edit ingresscontroller.operator default \
+  -n openshift-ingress-operator
+```
 
 ## Set up persistent storage for cluster monitoring
 
@@ -152,11 +199,12 @@ oc edit configs.imageregistry.operator.openshift.io
 Changes:
 
 ```yaml
-managementState: Managed
-rolloutStrategy: Recreate
-storage:
-  pvc:
-    claim: image-registry-storage
+spec:
+  managementState: Managed
+  rolloutStrategy: Recreate
+  storage:
+    pvc:
+      claim: image-registry-storage
 ```
 
 ## AlertManager Receivers
@@ -177,3 +225,9 @@ unshare --mount
 mount -o remount,rw /sysroot
 xfs_growfs /sysroot
 ```
+
+## Set up etcd defragmentation cron job
+
+```zsh
+ oc create -k kustomization.yaml
+ ```
