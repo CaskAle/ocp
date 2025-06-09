@@ -2,8 +2,7 @@
 
 ## Setup htpasswd identity provider
 
-Details are at:
-<https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/authentication_and_authorization/configuring-identity-providers>
+Details are at: <https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/authentication_and_authorization/configuring-identity-providers>
 
 ### Create an htpasswd file
 
@@ -59,7 +58,46 @@ oc adm policy add-cluster-role-to-user cluster-admin troy
 oc delete secret kubeadmin -n kube-system
 ```
 
-## Replace default ingress certificate with LetsEncrypt certificate
+## Set up image registry storage
+
+### Install the LVM Storage Operator
+
+### Create the PVC in advance for SNO
+
+```yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: image-registry-storage
+  namespace: openshift-image-registry
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Gi
+```
+
+### Modify the image registry configuration
+
+```sh
+oc edit configs.imageregistry.operator.openshift.io
+```
+
+Changes:
+
+```yaml
+spec:
+  managementState: Managed
+  rolloutStrategy: Recreate
+  storage:
+    pvc:
+      claim: image-registry-storage
+```
+
+## Replace tsl certificate with LetsEncrypt certificate
+
+Details are at: <https://stephennimmo.com/2024/05/15/generating-lets-encrypt-certificates-with-red-hat-openshift-cert-manager-operator-using-the-cloudflare-dns-solver/>
 
 ### Install the cert-manager operator
 
@@ -93,7 +131,7 @@ spec:
               name: cloudflare-api-token-secret
 ```
 
-### Create apps wildcard ingress Certificate
+### Create wildcard ingress Certificate
 
 ```yaml
 apiVersion: cert-manager.io/v1
@@ -151,7 +189,7 @@ oc edit proxy cluster
 ```zsh
 oc patch ingresscontroller.operator default \
   --type=merge \
-  --patch '{"spec":{"defaultCertificate": {"name": "apps-ocp-lab-snimmo-com-tls"}}}' \
+  --patch '{"spec":{"defaultCertificate": {"name": "apps-ocp-ankersen-dev-tls"}}}' \
   -n openshift-ingress-operator
 ```
 
@@ -160,7 +198,46 @@ This can also be edited directly with:
 ```zsh
 oc edit ingresscontroller.operator default \
   -n openshift-ingress-operator
+
 ```
+
+### Create api server Certificate
+
+```yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: api-ocp-ankersen-dev-certificate
+  namespace: openshift-config
+spec:
+  commonName: api.ocp.ankersen.dev
+  dnsNames:
+    - "api.ocp.ankersen.dev" 
+  secretName: api-ocp-ankersen-dev-tls
+  isCA: false
+  privateKey:
+    algorithm: ECDSA
+    rotationPolicy: Always
+    size: 384
+  issuerRef:
+    group: cert-manager.io
+    name: letsencrypt-cluster-issuer
+    kind: ClusterIssuer
+```
+
+```zsh
+oc patch apiserver cluster \
+  --type=merge \
+  --patch '{"spec":{"servingCerts": {"namedCertificates": [{"names": ["api.ocp.ankersen.dev"], "servingCertificate": {"name": "api-ocp-ankersen-dev-tls"}}]}}}' 
+```
+
+## AlertManager Receivers
+
+gmail smtp: smtp.gmail.com:587
+
+gmail userid: CaskAle13c
+
+gmail password: use app password
 
 ## Set up persistent storage for cluster monitoring
 
@@ -171,49 +248,6 @@ oc edit ingresscontroller.operator default \
 ```sh
 oc apply -f cluster-monitoring-config.yaml
 ```
-
-## Set up image registry storage
-
-### Create the PVC in advance for SNO
-
-```yaml
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: image-registry-storage
-  namespace: openshift-image-registry
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 100Gi
-```
-
-### Modify the image registry configuration
-
-```sh
-oc edit configs.imageregistry.operator.openshift.io
-```
-
-Changes:
-
-```yaml
-spec:
-  managementState: Managed
-  rolloutStrategy: Recreate
-  storage:
-    pvc:
-      claim: image-registry-storage
-```
-
-## AlertManager Receivers
-
-gmail smtp: smtp.gmail.com:587
-
-gmail userid: CaskAle13c
-
-gmail password: use app password
 
 ## Grow the root filesystem in CoreOS
 
