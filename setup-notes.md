@@ -34,7 +34,7 @@ metadata:
   name: cluster
 spec:
   identityProviders:
-    - name: htpasswd-oauth-provider 
+    - name: htpasswd-provider-oauth
       mappingMethod: claim 
       type: HTPasswd
       htpasswd:
@@ -43,7 +43,7 @@ spec:
 ```
 
 ```zsh
-oc apply -f htpasswd-oauth-provider.yaml
+oc apply -f htpasswd-provider-oauth.yaml
 ```
 
 ### Give user "troy" admin priviledges
@@ -95,7 +95,7 @@ spec:
       claim: image-registry-storage
 ```
 
-## Replace tsl certificate with LetsEncrypt certificate
+## Replace tls certificate with LetsEncrypt certificate
 
 Details are at: <https://stephennimmo.com/2024/05/15/generating-lets-encrypt-certificates-with-red-hat-openshift-cert-manager-operator-using-the-cloudflare-dns-solver/>
 
@@ -249,6 +249,46 @@ gmail password: use app password
 oc apply -f cluster-monitoring-config.yaml
 ```
 
+## Virtualization Networking
+
+### Node Network Configuration Policy to create br-ex network
+
+```yaml
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: br-ex-network
+spec:
+  nodeSelector:
+    node-role.kubernetes.io/worker: '' 
+  desiredState:
+    ovn:
+      bridge-mappings:
+      - localnet: br-ex-network
+        bridge: br-ex 
+        state: present
+```
+
+## Network Attachment Definition
+
+```yaml
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  annotations: {}
+  name: br-ex-network
+  namespace: virtual-machines
+spec:
+  config: |-
+    {
+        "cniVersion": "0.4.0",
+        "name": "br-ex-network",
+        "type": "ovn-k8s-cni-overlay",
+        "netAttachDefName": "virtual-machines/br-ex-network",
+        "topology": "localnet"
+    }
+```
+
 ## Grow the root filesystem in CoreOS
 
 ```zsh
@@ -265,3 +305,6 @@ xfs_growfs /sysroot
 ```zsh
  oc create -k kustomization.yaml
  ```
+
+## Set cpu governor on nodes
+

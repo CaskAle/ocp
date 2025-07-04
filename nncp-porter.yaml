@@ -1,0 +1,19 @@
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: nncp-porter
+spec:
+  desiredState:
+    interfaces:
+      - name: enp8s0f3u1
+        type: ethernet
+        state: up        
+      - name: br-vm
+        type: linux-bridge
+        bridge:
+          options:
+            stp: 
+              enabled: false
+          port:
+            - name: enp8s0f3u1
+        state: up
