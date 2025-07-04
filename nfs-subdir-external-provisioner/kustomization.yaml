@@ -1,6 +1,0 @@
-namespace: nfs-client-provisioner
-resources:
-  - github.com/CaskAle/nfs-subdir-external-provisioner/deploy
-  - nfs-client-provisioner-namespace.yaml
-patches:
-  - path: nfs-client-provisioner-deployment-patch.yaml
